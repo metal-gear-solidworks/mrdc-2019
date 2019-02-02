@@ -1,11 +1,11 @@
-#include "lib/xbee-arduino/XBee.h"
+#include "XBee.h"
 
 // pin constants
 
 
 // other constants
-#define BAUDRATE = 9600 // serial baud rate
-#define TIMEOUT = 50 // millisecond timeout for wireless comm
+#define BAUDRATE 9600 // serial baud rate
+#define TIMEOUT 50 // millisecond timeout for wireless comm
 
 // XBee setup
 XBee xbee = XBee();
