@@ -22,6 +22,7 @@ bool ddown = false;
 bool dleft = false;
 bool dright = false;
 int leftY = 0;
+int rightX = 0;
 int rightY = 0;
 int ltrigger = 0;
 int rtrigger = 0;
@@ -48,7 +49,7 @@ void loop() {
       xbee.getResponse().getRx16Response(rx16);
 
       // set controller variables according to the packet
-      // data of bit 'i' can be accessed with rx16.getData(i)
+      // data of byte 'i' can be accessed with rx16.getData(i)
       a = (rx16.getData(0) & 1 != 0) ? true: false; // & 00000001
       b = (rx16.getData(0) & 2 != 0) ? true: false; // & 00000010
       x = (rx16.getData(0) & 4 != 0) ? true: false; // & 00000100
@@ -58,6 +59,7 @@ void loop() {
       dleft = (rx16.getData(1) & 4 != 0) ? true: false;
       dright = (rx16.getData(1) & 8 != 0) ? true: false;
       leftY = rx16.getData(3);
+      rightX = rx16.getData(4);
       rightY = rx16.getData(5);
       ltrigger = rx16.getData(6);
       rtrigger = rx16.getData(7);
