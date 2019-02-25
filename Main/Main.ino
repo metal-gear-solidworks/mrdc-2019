@@ -10,6 +10,23 @@ byte feedback[10];
 byte controller[8];
 byte data[8];
 
+// pin macros, make sure to set these
+#define frontLeftPWM 0
+#define frontRightPWM 0
+#define rearLeftPWM 0
+#define rearRightPWM 0
+
+#define intakePWM 0
+
+#define shooterPWM1 0
+#define shooterPWM2 0
+
+#define linXPin 0
+#define linYPin 0
+#define linBPin 0
+#define linAPin 0
+
+// wireless communication variables
 boolean connection;
 boolean badPacket;
 byte x;
@@ -18,68 +35,45 @@ byte i;
 byte size1;
 byte checkSumTX;    // check sum for transmitting data
 byte checkSumRX;    // check sum for recieving data
-
-byte driveThrottle; //drive variables
-byte revThrottle;
-byte driveHeading;
-
-unsigned int _rStickX;
-
-static double headingMod = 1.6;
-bool quickTurn;
-
-bool doorTrigger;   //intake variables
-bool releaseTrigger;
-bool intakeTrigger;
-bool reverseTrigger;
-bool prevState = false;
-bool releasePrev = false;
-bool releaseState = false;
-bool piston_out = false;
 bool firstTime = true;
-
-int _DoorOne;
-int _DoorTwo;
-int _ReleaseOne;
-int _ReleaseTwo;
-
-byte armVal;    //arm variables
-
 unsigned long read_time;
 
-#define DriveML1 2
-#define DriveML2 3
-#define DriveMR1 4
-#define DriveMR2 5
-#define rollers 6
-#define lift 8
-#define armMotor 7
+// drive motors
+Servo driveFrontLeft; // front left wheel
+Servo driveFrontRight; // front right wheel
+Servo driveRearLeft; // rear left wheel
+Servo driveRearRight; // rear right wheel
 
-#define doorSolenoid 16
-#define releaseSolenoid 17
+// shooter motors
+Servo shooterLeft;
+Servo shooterRight;
 
-//unused
-#define doorSolenoidRev 18
-#define releaseSolenoidRev 19
-//#define compressorPin 30
+// intake motor
+Servo intake;
 
-  Servo DriveL1;
-  Servo DriveL2;
-  Servo DriveR1;
-  Servo DriveR2;
+// drive variables
+int leftThrottle = 90; // throttle for left side
+int rightThrottle = 90; // throttle for right side
 
-  Servo intake1;
-  Servo intake2;
+// intake variable
+bool intakeTrigger = false;
 
-  Servo ArmMotor;
+// shooter variable
+bool shooterTrigger = false;
+
+// linear actuator variables
+bool linX = false; // actuator bound to X
+bool linY = false; // actuator bound to Y
+bool linB = false; // actuator bound to B
+bool linA = false; // actuator bound to A
 
 void failsafe(){
     // write the code below that you want to run
     // when the robot loses a signal here
     firstTime = false;
-    driveBaseFailsafe();
-    IntakeFailsafe();
-    armFailsafe();
+    //driveBaseFailsafe();
+    //IntakeFailsafe();
+    //armFailsafe();
     connection = false;
 }
 
@@ -94,9 +88,10 @@ void setup(){
     connection = true;
 
     //subsystem initialization
-    DriveBaseInit(DriveML1, DriveML2, DriveMR1, DriveMR2);
-    IntakeInit(rollers, lift, doorSolenoid, doorSolenoidRev, releaseSolenoid, releaseSolenoidRev);
-    ArmInit(armMotor);
+	initDrive(frontLeftPWM, rearLeftPWM, frontRightPWM, rearRightPWM);
+	initShooter(shooterPWM1, shooterPWM2);
+	initIntake(intakePWM);
+	initLinearActuators(linAPin, linBPin, linXPin, linYPin);
     failsafe();
     read_time = millis();
     checkSumRX = 0;
@@ -155,267 +150,75 @@ void loop(){
         failsafe();
     }
 }
-void mainCode()
-{
-          // write the code below that you want to run
-        // when the robot recieves valid data of the xbox controller
-        // basically all the motor control stuff
-        
-        driveThrottle = controller[7];
-        revThrottle = controller[6];
-        driveHeading = controller[2];
-        updateDrive(driveThrottle, revThrottle, driveHeading);
 
-        intakeTrigger = (B1 == ((controller[0] & B1)));
-        reverseTrigger = (B1 == ((controller[0] & B10) >> 1));
-        doorTrigger = (B1 == ((controller[0] & B1000) >> 3));
-        releaseTrigger = (B1 == ((controller[0] & B100) >> 2));
-        
-        runIntake(reverseTrigger, intakeTrigger, doorTrigger, releaseTrigger);
-        
-        armVal = controller[5];
-
-        setArm(armVal);
-
-        // below is the code for sending feedback to the driver station
-
-        Serial1.write(255);
-        checkSumTX = 0;
-        for(i=0; i<10; i++){
-            Serial1.write(feedback[i]);
-            checkSumTX += feedback[i];
-        }
-        Serial1.write(checkSumTX);
-        Serial1.write(240);
+// main code executed upon successful I/O
+void mainCode() {
+    updateDrive(controller[3], controller[5]);
+	updateShooter(B1 == ((controller[0] & B100000) >> 5)); // right bumper, set via janky bitwise stuff
+	updateIntake(B1 == ((controller[0] & B10000) >> 4)); // left bumper, through similar jank
+	updateLinearActuators(B1 == ((controller[0] & B1)),
+						  B1 == ((controller[0] & B10) >> 1),
+						  B1 == ((controller[0] & B100) >> 2),
+						  B1 == ((controller[0] & B1000) >> 3));
 }
 
-//DriveBase subsystem
-void DriveBaseInit(int leftPWM1, int leftPWM2, int rightPWM1, int rightPWM2)
-{
-//subsystem setup, assigns pin number and initializes pin
-  DriveL1.attach(leftPWM1);
-  DriveL2.attach(leftPWM2);
-  DriveR1.attach(rightPWM1);
-  DriveR2.attach(rightPWM2);
+// updates state of drive motors
+void updateDrive(byte leftY, byte rightY) {
+	// this might not work
+	double leftProp = (((double) ((int) leftY) - 100)/100)*90;
+	double rightProp = (((double) ((int) rightY) - 100)/100)*90;
+
+	leftThrottle = ((int) leftProp) + 90;
+	rightThrottle = ((int) rightProp) + 90;
+
+	driveFrontLeft.write(leftThrottle);
+	driveRearLeft.write(leftThrottle);
+	driveFrontRight.write(rightThrottle);
+	driveFrontLeft.write(rightThrottle);
 }
 
-void setQuickTurn(double throttle, double heading)
-{
-  if((fabs(throttle) < 5) && (fabs(heading) > 5)) quickTurn = true;
-  else quickTurn = false;  
+// drive init function
+void initDrive(int leftPWM1, int leftPWM2, int rightPWM1, int rightPWM2) {
+	driveFrontLeft.attach(leftPWM1);
+	driveRearLeft.attach(leftPWM2);
+	driveFrontRight.attach(rightPWM1);
+	driveRearRight.attach(rightPWM2);
 }
 
-void setThrottle(int _lStickY, int _rStickX)
-{
-   int lSpeed;
-   int lSpeedMag;
-   int rSpeed;
-   double throttle = abs(_lStickY-90) * (_lStickY < 90 ? -1 : 1);    //// = magnitude & direction of throttle
-   double heading = abs(_rStickX-90) * (_rStickX < 90 ? -1 : 1);    //// = magnitude and direction of heading
-
-   double angularPower = fabs(throttle/90)*(heading)*(headingMod);
-
-   setQuickTurn(throttle, heading);
-
-   if(quickTurn) 
-   {
-   lSpeed = throttle + heading + 90;
-   rSpeed = throttle - heading + 90;
-   }
-   else
-   {
-   lSpeed = throttle + angularPower + 90;
-   rSpeed = throttle - angularPower + 90; 
-   }
-//constrains motor values to within the PWM limits
-if(lSpeed > 180) lSpeed = 180;
-if(rSpeed > 180) rSpeed = 180;
-if(lSpeed < 0) lSpeed = 0;
-if(rSpeed < 0) rSpeed = 0;
-//sends value to speed controller
-lSpeedMag = abs(90 - lSpeed);
-lSpeedMag *= 13;
-lSpeedMag /= 20;
-if(lSpeed > 90) lSpeed = 90 + lSpeedMag;
-else lSpeed = 90 - lSpeedMag;
-
-  feedback[0] = lSpeed;
-  feedback[1] = rSpeed;
-  lSpeed = 180 - lSpeed;
-  rSpeed = 180 - rSpeed;
-  
-  DriveL1.write(lSpeed);
-  DriveL2.write(lSpeed);
-  DriveR1.write(rSpeed);
-  DriveR2.write(rSpeed);
+// updates state of shooter motors
+void updateShooter(bool rightBumper) {
+	shooterLeft.write(rightBumper ? 180 : 90);
+	shooterRight.write(rightBumper ? 180 : 90);
 }
 
-void updateDrive(byte throttle, byte reverse, byte rStickX)
-{
-//run every cycle to set drive motor value and piston state
-//l/r triggers assigns throttle, rStickX assigns rotation,
-int _throttle = (throttle >> 1);
-_throttle *= 180;
-_throttle /= 100;
-
-int _reverse = (reverse >> 1);
-_reverse *= 180;
-_reverse /= 100;
-
-int throttleMag = _throttle - _reverse;
-  throttleMag += 90;
-
-_rStickX = rStickX;
-
-_rStickX *= 180;
-_rStickX /= 200;
-
-//deadband control to prevent non-significant power output
-  if(throttleMag > 85 && throttleMag < 95) throttleMag = 90;
-  if(_rStickX > 85 && _rStickX < 95) _rStickX = 90;
-  setThrottle(throttleMag, _rStickX);
+// shooter init function
+void initShooter(int leftPWM, int rightPWM) {
+	shooterLeft.attach(leftPWM);
+	shooterRight.attach(rightPWM);
 }
 
-void driveBaseFailsafe()
-{
-  DriveL1.write(90);
-  DriveL2.write(90);
-  DriveR1.write(90);
-  DriveR2.write(90);
+// updates state of intake motors
+void updateIntake(bool leftBumper) {
+	intake.write(leftBumper ? 180 : 90);
 }
 
-
-//intake subsystem
-void IntakeInit(int PWM, int PWMTwo, int pistonOne, int pistonTwo, int pistonThree, int pistonFour)
-{
-//subsystem setup, assigns pin number and initializes pin
-  
-  int _PWM = PWM;
-  int _PWM2 = PWMTwo;
-  _DoorOne = pistonOne;
-  _DoorTwo = pistonTwo;
-  _ReleaseOne = pistonThree;
-  _ReleaseTwo = pistonFour;
-  pinMode(_DoorOne, OUTPUT);//pin for piston control
-  pinMode(_DoorTwo, OUTPUT);
-  pinMode(_ReleaseOne, OUTPUT);
-  pinMode(_ReleaseTwo, OUTPUT);
-  intake1.attach(_PWM);
-  intake2.attach(_PWM2);
+// intake init function
+void initIntake(int PWM) {
+	intake.attach(PWM);
 }
 
-void setIntakeSpeed(int state)
-{
-//for input -1, 0, 1, sets speed to full forward, full reverse, or off
-
-  int IntakeSpeed1 = (70 * state) + 90;
-  int IntakeSpeed2 = 90 - (40*state);
-
-//sends value to speed controller
-  feedback[2] = IntakeSpeed1;
-  intake1.write(IntakeSpeed1);
-  intake2.write(IntakeSpeed2);
+// updates state of linear actuators
+void updateLinearActuators(bool A, bool B, bool X, bool Y) {
+	digitalWrite(linAPin, A ? HIGH : LOW);
+	digitalWrite(linBPin, B ? HIGH : LOW);
+	digitalWrite(linXPin, X ? HIGH : LOW);
+	digitalWrite(linYPin, Y ? HIGH : LOW);
 }
 
-void runDoorPiston(bool piston)//accepts piston as state of button
-{
-  if(piston) feedback[3] = 1;
-  else feedback[3] = 0;
-    digitalWrite(_DoorOne, piston?HIGH:LOW);//send 'pressed' to _PISTON
-    digitalWrite(_DoorTwo, piston?LOW:HIGH);//opposite of paired solenoid
-}
-
-void runReleasePiston(bool piston)
-{
-  if(piston) feedback[5] = 1;
-  else feedback[5] = 0;
-    digitalWrite(_ReleaseOne, piston?HIGH:LOW);//send 'pressed' to _PISTON
-    digitalWrite(_ReleaseTwo, piston?LOW:HIGH);//opposite of paired solenoid
-}
-
-void runIntake(bool lTrigger, bool rTrigger, bool doorPiston, bool releasePiston)
-{
-//if left trigger held, run intake out
-//if right trigger held, run intake in
-//right trigger takes priority
-if(rTrigger)
-{
-  setIntakeSpeed(1);//run intake in
-}
-else if(lTrigger)
-{
-  setIntakeSpeed(-1);//run intake out
-}
-else setIntakeSpeed(0);//do nothing
-
-if(doorPiston && doorPiston != prevState)
-{
-  runDoorPiston(!piston_out);
-  piston_out = !piston_out;
-  prevState = doorPiston;
-}
-else if(!doorPiston)
-{
-  prevState = doorPiston;
-}
-
-if(releasePiston && releasePiston != releasePrev)
-{
-  runReleasePiston(!releaseState);
-  releaseState = !releaseState;
-  releasePrev = releasePiston;
-}
-else if(!doorPiston)
-{
-  releasePrev = releasePiston;
-}
-}
-
-void IntakeFailsafe()
-{
-  intake1.write(90);
-  intake2.write(90);
-}
-
-
-//arm subsystem
-void ArmInit(int armPWM)
-{
-//subsystem setup, assigns pin number and initializes pin
-
-  int _PWM1 = armPWM;
-
-  ArmMotor.attach(_PWM1);
-}
-
-void setArmSpeed(byte _speed)
-{
-//for input -1, 0, 1, sets speed to half forward, half reverse, or off
-long motorSpeed = _speed;
-
-motorSpeed *= 180;
-motorSpeed /= 200;
-
-  if(abs(90 - motorSpeed) < 5) motorSpeed = 90;
-
-  int magnitude = abs(90 - motorSpeed);
-  magnitude *=3;
-  magnitude /= 10;
-  if(motorSpeed > 90) motorSpeed = 90 + magnitude;
-  else motorSpeed = 90 - magnitude;
-
-//sends value to speed controller
-  feedback[4] = motorSpeed;
-  ArmMotor.write(motorSpeed);
-}
-
-void setArm(byte _speed)
-{
-//setArmSpeed((lTrigger >> 1), (rTrigger >> 1));
-setArmSpeed(_speed);
-}
-
-void armFailsafe()
-{
-  ArmMotor.write(90);
+// liner actuator init function
+void initLinearActuators(int A, int B, int X, int Y) {
+	pinMode(A, OUTPUT);
+	pinMode(B, OUTPUT);
+	pinMode(X, OUTPUT);
+	pinMode(Y, OUTPUT);
 }
