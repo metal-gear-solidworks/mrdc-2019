@@ -174,7 +174,7 @@ void updateDrive(byte leftY, byte rightY) {
 	driveFrontLeft.write(leftThrottle);
 	driveRearLeft.write(leftThrottle);
 	driveFrontRight.write(rightThrottle);
-	driveFrontLeft.write(rightThrottle);
+	driveRearRight.write(rightThrottle);
 }
 
 // drive init function
