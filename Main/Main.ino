@@ -11,20 +11,20 @@ byte controller[8];
 byte data[8];
 
 // pin macros, make sure to set these
-#define frontLeftPWM 0
-#define frontRightPWM 0
-#define rearLeftPWM 0
-#define rearRightPWM 0
+#define frontLeftPWM 2
+#define frontRightPWM 3
+#define rearLeftPWM 4
+#define rearRightPWM 5
 
-#define intakePWM 0
+#define intakePWM 6
 
-#define shooterPWM1 0
-#define shooterPWM2 0
+#define shooterPWM1 7
+#define shooterPWM2 8
 
-#define linXPin 0
-#define linYPin 0
-#define linBPin 0
-#define linAPin 0
+#define linXPin 14
+#define linYPin 15
+#define linBPin 16
+#define linAPin 17
 
 // wireless communication variables
 boolean connection;
