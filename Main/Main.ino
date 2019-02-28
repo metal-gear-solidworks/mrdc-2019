@@ -88,10 +88,10 @@ void setup(){
     connection = true;
 
     //subsystem initialization
-	initDrive(frontLeftPWM, rearLeftPWM, frontRightPWM, rearRightPWM);
-	initShooter(shooterPWM1, shooterPWM2);
-	initIntake(intakePWM);
-	initLinearActuators(linAPin, linBPin, linXPin, linYPin);
+    initDrive(frontLeftPWM, rearLeftPWM, frontRightPWM, rearRightPWM);
+    initShooter(shooterPWM1, shooterPWM2);
+    initIntake(intakePWM);
+    initLinearActuators(linAPin, linBPin, linXPin, linYPin);
     failsafe();
     read_time = millis();
     checkSumRX = 0;
@@ -112,10 +112,10 @@ void loop(){
     while(size1 > 0){
         if(packet_index == 0){
             if(Serial1.read()==255){
-//              Serial.println("Valid lead");
+		//              Serial.println("Valid lead");
                 packet_index++;
             }
-//            else Serial.println("Invalid lead");
+	    //            else Serial.println("Invalid lead");
         }
         else if(packet_index < 9){
             data[packet_index-1] = Serial1.read();
@@ -132,16 +132,16 @@ void loop(){
         }
         else if(packet_index == 10){
             if(Serial1.read() == 240){
-//              Serial.println("Valid end packet");
+		//              Serial.println("Valid end packet");
                 for(i=0; i<8; i++){
                     controller[i] = data[i];
                 }
                 connection = true;
-                 read_time = millis();
-                 firstTime = true;
-                 mainCode();
+		read_time = millis();
+		firstTime = true;
+		mainCode();
             }
-//            else Serial.println("Invalid end packet");
+	    //            else Serial.println("Invalid end packet");
             packet_index=0;
         }
         size1--;
@@ -154,71 +154,71 @@ void loop(){
 // main code executed upon successful I/O
 void mainCode() {
     updateDrive(controller[3], controller[5]);
-	updateShooter(B1 == ((controller[0] & B100000) >> 5)); // right bumper, set via janky bitwise stuff
-	updateIntake(B1 == ((controller[0] & B10000) >> 4)); // left bumper, through similar jank
-	updateLinearActuators(B1 == ((controller[0] & B1)),
-						  B1 == ((controller[0] & B10) >> 1),
-						  B1 == ((controller[0] & B100) >> 2),
-						  B1 == ((controller[0] & B1000) >> 3));
+    updateShooter(B1 == ((controller[0] & B100000) >> 5)); // right bumper, set via janky bitwise stuff
+    updateIntake(B1 == ((controller[0] & B10000) >> 4)); // left bumper, through similar jank
+    updateLinearActuators(B1 == ((controller[0] & B1)),
+			  B1 == ((controller[0] & B10) >> 1),
+			  B1 == ((controller[0] & B100) >> 2),
+			  B1 == ((controller[0] & B1000) >> 3));
 }
 
 // updates state of drive motors
 void updateDrive(byte leftY, byte rightY) {
-	// this might not work
-	double leftProp = (((double) ((int) leftY) - 100)/100)*90;
-	double rightProp = (((double) ((int) rightY) - 100)/100)*90;
+    // this might not work
+    double leftProp = (((double) ((int) leftY) - 100)/100)*90;
+    double rightProp = (((double) ((int) rightY) - 100)/100)*90;
 
-	leftThrottle = ((int) leftProp) + 90;
-	rightThrottle = ((int) rightProp) + 90;
+    leftThrottle = ((int) leftProp) + 90;
+    rightThrottle = ((int) rightProp) + 90;
 
-	driveFrontLeft.write(leftThrottle);
-	driveRearLeft.write(leftThrottle);
-	driveFrontRight.write(rightThrottle);
-	driveRearRight.write(rightThrottle);
+    driveFrontLeft.write(leftThrottle);
+    driveRearLeft.write(leftThrottle);
+    driveFrontRight.write(rightThrottle);
+    driveRearRight.write(rightThrottle);
 }
 
 // drive init function
 void initDrive(int leftPWM1, int leftPWM2, int rightPWM1, int rightPWM2) {
-	driveFrontLeft.attach(leftPWM1);
-	driveRearLeft.attach(leftPWM2);
-	driveFrontRight.attach(rightPWM1);
-	driveRearRight.attach(rightPWM2);
+    driveFrontLeft.attach(leftPWM1);
+    driveRearLeft.attach(leftPWM2);
+    driveFrontRight.attach(rightPWM1);
+    driveRearRight.attach(rightPWM2);
 }
 
 // updates state of shooter motors
 void updateShooter(bool rightBumper) {
-	shooterLeft.write(rightBumper ? 180 : 90);
-	shooterRight.write(rightBumper ? 180 : 90);
+    shooterLeft.write(rightBumper ? 180 : 90);
+    shooterRight.write(rightBumper ? 180 : 90);
 }
 
 // shooter init function
 void initShooter(int leftPWM, int rightPWM) {
-	shooterLeft.attach(leftPWM);
-	shooterRight.attach(rightPWM);
+    shooterLeft.attach(leftPWM);
+    shooterRight.attach(rightPWM);
 }
 
 // updates state of intake motors
 void updateIntake(bool leftBumper) {
-	intake.write(leftBumper ? 180 : 90);
+    intake.write(leftBumper ? 180 : 90);
 }
 
 // intake init function
 void initIntake(int PWM) {
-	intake.attach(PWM);
+    intake.attach(PWM);
 }
 
 // updates state of linear actuators
 void updateLinearActuators(bool A, bool B, bool X, bool Y) {
-	digitalWrite(linAPin, A ? HIGH : LOW);
-	digitalWrite(linBPin, B ? HIGH : LOW);
-	digitalWrite(linXPin, X ? HIGH : LOW);
-	digitalWrite(linYPin, Y ? HIGH : LOW);
+    digitalWrite(linAPin, A ? HIGH : LOW);
+    digitalWrite(linBPin, B ? HIGH : LOW);
+    digitalWrite(linXPin, X ? HIGH : LOW);
+    digitalWrite(linYPin, Y ? HIGH : LOW);
 }
 
 // liner actuator init function
 void initLinearActuators(int A, int B, int X, int Y) {
-	pinMode(A, OUTPUT);
-	pinMode(B, OUTPUT);
-	pinMode(X, OUTPUT);
-	pinMode(Y, OUTPUT);
+    pinMode(A, OUTPUT);
+    pinMode(B, OUTPUT);
+    pinMode(X, OUTPUT);
+    pinMode(Y, OUTPUT);
 }
