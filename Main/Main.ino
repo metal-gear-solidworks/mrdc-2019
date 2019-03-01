@@ -165,16 +165,17 @@ void mainCode() {
 // updates state of drive motors
 void updateDrive(byte leftY, byte rightY) {
     // this might not work
-    double leftProp = (((double) ((int) leftY) - 100)/100)*90;
-    double rightProp = (((double) ((int) rightY) - 100)/100)*90;
+    int leftProp = (int)leftY;
+    int rightProp = (int)rightY;
 
-    leftThrottle = ((int) leftProp) + 90;
-    rightThrottle = ((int) rightProp) + 90;
+    leftThrottle = leftProp*5 + 1000;
+    Serial.println(leftThrottle);
+    rightThrottle = rightProp*5 + 1000;
 
-    driveFrontLeft.write(leftThrottle);
-    driveRearLeft.write(leftThrottle);
-    driveFrontRight.write(rightThrottle);
-    driveRearRight.write(rightThrottle);
+    driveFrontLeft.writeMicroseconds(leftThrottle);
+    driveRearLeft.writeMicroseconds(leftThrottle);
+    driveFrontRight.writeMicroseconds(rightThrottle);
+    driveRearRight.writeMicroseconds(rightThrottle);
 }
 
 // drive init function
@@ -183,6 +184,13 @@ void initDrive(int leftPWM1, int leftPWM2, int rightPWM1, int rightPWM2) {
     driveRearLeft.attach(leftPWM2);
     driveFrontRight.attach(rightPWM1);
     driveRearRight.attach(rightPWM2);
+
+    driveFrontLeft.writeMicroseconds(1500);
+    driveRearLeft.writeMicroseconds(1500);
+    driveFrontRight.writeMicroseconds(1500);
+    driveRearRight.writeMicroseconds(1500);
+
+    delay(2000);
 }
 
 // updates state of shooter motors
