@@ -186,7 +186,7 @@ void updateDrive(byte leftY, byte rightY) {
     int leftProp = (int)leftY;
     int rightProp = (int)rightY;
 
-    leftThrottle = leftProp*5 + 1000;
+    leftThrottle = (1000 - leftProp*5) + 1000;
     rightThrottle = rightProp*5 + 1000;
 
     driveFrontLeft.writeMicroseconds(leftThrottle);
