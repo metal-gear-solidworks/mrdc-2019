@@ -52,8 +52,8 @@ Servo shooterRight;
 Servo intake;
 
 // drive variables
-int leftThrottle = 90; // throttle for left side
-int rightThrottle = 90; // throttle for right side
+int leftThrottle = 1500; // throttle for left side
+int rightThrottle = 1500; // throttle for right side
 
 // intake variable
 bool intakeTrigger = false;
@@ -71,10 +71,28 @@ void failsafe(){
     // write the code below that you want to run
     // when the robot loses a signal here
     firstTime = false;
-    //driveBaseFailsafe();
-    //IntakeFailsafe();
-    //armFailsafe();
+    driveFailsafe();
+    intakeFailsafe();
+    linearActuatorFailsafe();
     connection = false;
+}
+
+void driveFailsafe() {
+    driveFrontLeft.writeMicroseconds(1500);
+    driveRearLeft.writeMicroseconds(1500);
+    driveFrontRight.writeMicroseconds(1500);
+    driveRearRight.writeMicroseconds(1500);
+}
+
+void linearActuatorFailsafe() {
+    digitalWrite(linAPin, LOW);
+    digitalWrite(linBPin, LOW);
+    digitalWrite(linXPin, LOW);
+    digitalWrite(linYPin, LOW);
+}
+
+void intakeFailsafe() {
+    intake.write(90);
 }
 
 void setup(){
@@ -169,7 +187,6 @@ void updateDrive(byte leftY, byte rightY) {
     int rightProp = (int)rightY;
 
     leftThrottle = leftProp*5 + 1000;
-    Serial.println(leftThrottle);
     rightThrottle = rightProp*5 + 1000;
 
     driveFrontLeft.writeMicroseconds(leftThrottle);
@@ -189,7 +206,7 @@ void initDrive(int leftPWM1, int leftPWM2, int rightPWM1, int rightPWM2) {
     driveRearLeft.writeMicroseconds(1500);
     driveFrontRight.writeMicroseconds(1500);
     driveRearRight.writeMicroseconds(1500);
-
+    
     delay(2000);
 }
 
@@ -223,7 +240,7 @@ void updateLinearActuators(bool A, bool B, bool X, bool Y) {
     digitalWrite(linYPin, Y ? HIGH : LOW);
 }
 
-// liner actuator init function
+// linear actuator init function
 void initLinearActuators(int A, int B, int X, int Y) {
     pinMode(A, OUTPUT);
     pinMode(B, OUTPUT);
