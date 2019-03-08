@@ -5,6 +5,7 @@
 #include <Servo.h>
 #define baudrate 9600   // the baudrate for comms, has to match the baudrate of the driverstation
 #define time_out 500    // the number of milliseconds to wait after recieving signal before calling failsafe
+#define SPEED 1 // 1 - 5
 
 byte feedback[10];
 byte controller[8];
@@ -186,13 +187,22 @@ void updateDrive(byte leftY, byte rightY) {
     int leftProp = (int)leftY;
     int rightProp = (int)rightY;
 
-    leftThrottle = (1000 - leftProp*5) + 1000;
-    rightThrottle = rightProp*5 + 1000;
+    int rightPropInverted = (int)rightY;
+    int leftPropInverted = (int)leftY;
 
-    driveFrontLeft.writeMicroseconds(leftThrottle);
-    driveRearLeft.writeMicroseconds(1000 - (leftThrottle - 1000) + 1000);
-    driveFrontRight.writeMicroseconds(1000 - (rightThrottle - 1000) + 1000);
-    driveRearRight.writeMicroseconds(rightThrottle);
+    leftProp = map(leftProp, 0, 200, 1500 - 100*SPEED, 1500 + 100*SPEED);
+    rightProp = map(rightProp, 0, 200, 1500 - 100*SPEED, 1500 + 100*SPEED);
+
+    leftPropInverted = map(leftPropInverted, 0, 200, 1500 + 100*SPEED, 1500 - 100*SPEED);
+    rightPropInverted = map(rightPropInverted, 0, 200, 1500 + 100*SPEED, 1500 - 100*SPEED);
+
+
+   // Serial.println(leftProp);
+
+    driveFrontLeft.writeMicroseconds(leftPropInverted);
+    driveRearLeft.writeMicroseconds(leftProp);
+    driveFrontRight.writeMicroseconds(rightPropInverted);
+    driveRearRight.writeMicroseconds(rightProp);
 }
 
 // drive init function
@@ -224,7 +234,7 @@ void initShooter(int leftPWM, int rightPWM) {
 
 // updates state of intake motors
 void updateIntake(bool leftBumper) {
-    intake.write(leftBumper ? 180 : 90);
+    intake.writeMicroseconds(leftBumper ? 1000 : 1500);
 }
 
 // intake init function
