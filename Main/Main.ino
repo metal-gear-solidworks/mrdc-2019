@@ -5,7 +5,7 @@
 #include <Servo.h>
 #define baudrate 9600   // the baudrate for comms, has to match the baudrate of the driverstation
 #define time_out 500    // the number of milliseconds to wait after recieving signal before calling failsafe
-#define SPEED 1 // 1 - 5
+#define SPEED 0.75 // 1 - 5
 
 byte feedback[10];
 byte controller[8];
@@ -222,8 +222,7 @@ void initDrive(int leftPWM1, int leftPWM2, int rightPWM1, int rightPWM2) {
 
 // updates state of shooter motors
 void updateShooter(bool rightBumper) {
-    shooterLeft.write(rightBumper ? 180 : 90);
-    shooterRight.write(rightBumper ? 180 : 90);
+    intake.writeMicroseconds(rightBumper ? 2000 : 1500);
 }
 
 // shooter init function
