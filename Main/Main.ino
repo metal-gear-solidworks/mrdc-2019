@@ -131,10 +131,10 @@ void loop(){
     while(size1 > 0){
         if(packet_index == 0){
             if(Serial1.read()==255){
-		//              Serial.println("Valid lead");
+    //              Serial.println("Valid lead");
                 packet_index++;
             }
-	    //            else Serial.println("Invalid lead");
+      //            else Serial.println("Invalid lead");
         }
         else if(packet_index < 9){
             data[packet_index-1] = Serial1.read();
@@ -151,16 +151,16 @@ void loop(){
         }
         else if(packet_index == 10){
             if(Serial1.read() == 240){
-		//              Serial.println("Valid end packet");
+    //              Serial.println("Valid end packet");
                 for(i=0; i<8; i++){
                     controller[i] = data[i];
                 }
                 connection = true;
-		read_time = millis();
-		firstTime = true;
-		mainCode();
+    read_time = millis();
+    firstTime = true;
+    mainCode();
             }
-	    //            else Serial.println("Invalid end packet");
+      //            else Serial.println("Invalid end packet");
             packet_index=0;
         }
         size1--;
@@ -173,12 +173,12 @@ void loop(){
 // main code executed upon successful I/O
 void mainCode() {
     updateDrive(controller[3], controller[5]);
-    updateShooter(B1 == ((controller[0] & B100000) >> 5)); // right bumper, set via janky bitwise stuff
-    updateIntake(B1 == ((controller[0] & B10000) >> 4)); // left bumper, through similar jank
+    //updateShooter(B1 == ((controller[0] & B100000) >> 5)); // right bumper, set via janky bitwise stuff
+    updateIntake(B1 == ((controller[0] & B10000) >> 4), B1 == ((controller[0] & B100000) >> 5)); // left bumper, through similar jank
     updateLinearActuators(B1 == ((controller[0] & B1)),
-			  B1 == ((controller[0] & B10) >> 1),
-			  B1 == ((controller[0] & B100) >> 2),
-			  B1 == ((controller[0] & B1000) >> 3));
+        B1 == ((controller[0] & B10) >> 1),
+        B1 == ((controller[0] & B100) >> 2),
+        B1 == ((controller[0] & B1000) >> 3));
 }
 
 // updates state of drive motors
@@ -232,8 +232,18 @@ void initShooter(int leftPWM, int rightPWM) {
 }
 
 // updates state of intake motors
-void updateIntake(bool leftBumper) {
-    intake.writeMicroseconds(leftBumper ? 1000 : 1500);
+void updateIntake(bool leftBumper, bool rightBumper) {
+  if (leftBumper ^ rightBumper) {
+    if (leftBumper) {
+      intake.writeMicroseconds(1000);
+    }
+    else if(rightBumper) {
+      intake.writeMicroseconds(2000);
+    }
+  }
+  else {
+    intake.writeMicroseconds(1500);
+  }
 }
 
 // intake init function
